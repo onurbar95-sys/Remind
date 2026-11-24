@@ -90,7 +90,7 @@ fun DwellCountdownCard(
             if (isNotificationActive) {
                 // --- 常驻通知激活中：展示停留倒计时 ---
                 Row(
-                    verticalAlignment = Alignment.CenterVertifally,
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
