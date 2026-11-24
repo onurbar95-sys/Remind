@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,10 +15,13 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.stayfocus.reminder.notification.NotificationHelper
 import com.stayfocus.reminder.ui.screens.MainScreen
 import com.stayfocus.reminder.ui.theme.FocusReminderTheme
 import com.stayfocus.reminder.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -40,7 +44,20 @@ class MainActivity : ComponentActivity() {
         // 检查并请求通知权限 (Android 13+)
         checkNotificationPermission()
 
-        // 绑定应用生命周期，实现“前台计时、切出暂停”防作弊机制
+        // 屏幕常亮控制（防止 2 小时专注停留期间手机自动熄屏休眠）
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isKeepScreenOn.collect { keepOn ->
+                    if (keepOn) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
+                }
+            }
+        }
+
+        // 绑定应用生命周期，实现“前台计时、切出暂停、断点保存”防作弊机制
         lifecycle.addObserver(LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {

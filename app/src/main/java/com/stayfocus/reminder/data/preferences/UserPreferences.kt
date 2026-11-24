@@ -32,6 +32,9 @@ class UserPreferences(context: Context) {
     private val _todayReviewed = MutableStateFlow(isTodayReviewed())
     val todayReviewed: StateFlow<Boolean> = _todayReviewed.asStateFlow()
 
+    private val _isKeepScreenOn = MutableStateFlow(isKeepScreenOn())
+    val isKeepScreenOn: StateFlow<Boolean> = _isKeepScreenOn.asStateFlow()
+
     fun getDwellDuration(): Int {
         return prefs.getInt(KEY_DWELL_SECONDS, DEFAULT_DWELL_SECONDS)
     }
@@ -39,6 +42,27 @@ class UserPreferences(context: Context) {
     fun setDwellDuration(seconds: Int) {
         prefs.edit().putInt(KEY_DWELL_SECONDS, seconds).apply()
         _dwellDurationSeconds.value = seconds
+    }
+
+    fun getSavedRemainingSeconds(): Int {
+        return prefs.getInt(KEY_SAVED_REMAINING_SECONDS, -1)
+    }
+
+    fun setSavedRemainingSeconds(seconds: Int) {
+        prefs.edit().putInt(KEY_SAVED_REMAINING_SECONDS, seconds).apply()
+    }
+
+    fun clearSavedRemainingSeconds() {
+        prefs.edit().remove(KEY_SAVED_REMAINING_SECONDS).apply()
+    }
+
+    fun isKeepScreenOn(): Boolean {
+        return prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
+    }
+
+    fun setKeepScreenOn(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, enabled).apply()
+        _isKeepScreenOn.value = enabled
     }
 
     fun getReminderHour(): Int {
@@ -84,11 +108,13 @@ class UserPreferences(context: Context) {
     fun markTodayReviewed() {
         val todayStr = getTodayDateString()
         prefs.edit().putString(KEY_LAST_REVIEWED_DATE, todayStr).apply()
+        clearSavedRemainingSeconds()
         _todayReviewed.value = true
     }
 
     fun resetTodayReviewed() {
         prefs.edit().remove(KEY_LAST_REVIEWED_DATE).apply()
+        clearSavedRemainingSeconds()
         _todayReviewed.value = false
     }
 
@@ -100,13 +126,15 @@ class UserPreferences(context: Context) {
     companion object {
         private const val PREFS_NAME = "focus_reminder_prefs"
         private const val KEY_DWELL_SECONDS = "dwell_seconds"
+        private const val KEY_SAVED_REMAINING_SECONDS = "saved_remaining_seconds"
+        private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_REMINDER_HOUR = "reminder_hour"
         private const val KEY_REMINDER_MINUTE = "reminder_minute"
         private const val KEY_REMINDER_ENABLED = "reminder_enabled"
         private const val KEY_NOTIFICATION_ACTIVE = "notification_active"
         private const val KEY_LAST_REVIEWED_DATE = "last_reviewed_date"
 
-        const val DEFAULT_DWELL_SECONDS = 60 // 默认停留 1 分钟 (60秒)
+        const val DEFAULT_DWELL_SECONDS = 7200 // 默认设定支持长达 2 小时 (7200秒)
         const val DEFAULT_REMINDER_HOUR = 8 // 默认每天早上 8:30
         const val DEFAULT_REMINDER_MINUTE = 30
     }

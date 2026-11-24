@@ -116,7 +116,7 @@ fun DwellCountdownCard(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = if (isPaused) "已离开前台，倒计时已暂停" else "请保持在应用内阅读待办...",
+                            text = if (isPaused) "已离开前台，倒计时已暂停" else "请保持在应用内阅读与完成待办...",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                         )
@@ -125,19 +125,24 @@ fun DwellCountdownCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 大数字倒计时
+                // 大数字倒计时 (支持 2 小时时分秒格式 HH:mm:ss)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val minutes = remainingSeconds / 60
+                    val hours = remainingSeconds / 3600
+                    val minutes = (remainingSeconds % 3600) / 60
                     val seconds = remainingSeconds % 60
-                    val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+                    val timeFormatted = if (hours > 0 || totalSeconds >= 3600) {
+                        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                    } else {
+                        String.format("%02d:%02d", minutes, seconds)
+                    }
 
                     Text(
                         text = timeFormatted,
-                        fontSize = 42.sp,
+                        fontSize = if (hours > 0 || totalSeconds >= 3600) 36.sp else 42.sp,
                         fontWeight = FontWeight.ExtraBold,
                         fontFamily = FontFamily.Monospace,
                         color = if (isPaused) FocusWarning else FocusPrimary
@@ -169,7 +174,7 @@ fun DwellCountdownCard(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "总需停留: ${totalSeconds}秒",
+                        text = "总需停留: ${formatDurationHelper(totalSeconds)}",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
@@ -223,7 +228,7 @@ fun DwellCountdownCard(
                             color = if (todayReviewed) Color(0xFF065F46) else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (todayReviewed) "常驻通知已为您自动解除，做得棒！" else "到达设定时间将自动弹出不可划掉的待办通知",
+                            text = if (todayReviewed) "常驻通知已为您自动解除，专注做得棒！" else "到达设定时间将自动弹出不可划掉的待办通知",
                             fontSize = 12.sp,
                             color = if (todayReviewed) Color(0xFF047857) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -238,8 +243,9 @@ fun DwellCountdownCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "设定停留门槛: ${totalSeconds} 秒",
+                        text = "停留门槛: ${formatDurationHelper(totalSeconds)}",
                         fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -259,5 +265,16 @@ fun DwellCountdownCard(
                 }
             }
         }
+    }
+}
+
+fun formatDurationHelper(seconds: Int): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    return buildString {
+        if (h > 0) append("${h}小时")
+        if (m > 0) append("${m}分钟")
+        if (s > 0 || (h == 0 && m == 0)) append("${s}秒")
     }
 }

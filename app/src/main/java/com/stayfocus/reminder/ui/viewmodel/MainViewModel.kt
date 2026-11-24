@@ -35,9 +35,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isReminderEnabled: StateFlow<Boolean> = preferences.isReminderEnabled
     val isNotificationActive: StateFlow<Boolean> = preferences.isNotificationActive
     val todayReviewed: StateFlow<Boolean> = preferences.todayReviewed
+    val isKeepScreenOn: StateFlow<Boolean> = preferences.isKeepScreenOn
 
     // 停留倒计时相关状态
-    private val _remainingSeconds = MutableStateFlow(preferences.getDwellDuration())
+    private val _remainingSeconds = MutableStateFlow(
+        preferences.getSavedRemainingSeconds().let { saved ->
+            if (saved > 0 && preferences.isNotificationActive()) saved else preferences.getDwellDuration()
+        }
+    )
     val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
 
     private val _isCountingDown = MutableStateFlow(false)
@@ -71,8 +76,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val isActive = NotificationHelper.isNotificationCurrentlyActive(getApplication())
         preferences.setNotificationActive(isActive)
         if (isActive && !_isCountingDown.value && !_justCompleted.value) {
-            // 如果常驻通知正在展示，且还未完成停留，初始化倒计时
-            if (_remainingSeconds.value <= 0 || _remainingSeconds.value > preferences.getDwellDuration()) {
+            val saved = preferences.getSavedRemainingSeconds()
+            if (saved > 0) {
+                _remainingSeconds.value = saved
+            } else if (_remainingSeconds.value <= 0 || _remainingSeconds.value > preferences.getDwellDuration()) {
                 _remainingSeconds.value = preferences.getDwellDuration()
             }
         }
@@ -89,7 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 当切到后台 (onPause) 时触发：暂停倒计时
+     * 当切到后台 (onPause) 时触发：暂停倒计时并保存进度（支持2小时断点续计）
      */
     fun onAppBackgrounded() {
         if (_isCountingDown.value) {
@@ -107,21 +114,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         countdownJob?.cancel()
         countdownJob = viewModelScope.launch {
+            var tickCount = 0
             while (_remainingSeconds.value > 0) {
                 delay(1000L)
                 _remainingSeconds.value -= 1
+                tickCount++
+                // 每5秒备份一次进度，即使被杀后台也能完美断点恢复
+                if (tickCount % 5 == 0) {
+                    preferences.setSavedRemainingSeconds(_remainingSeconds.value)
+                }
             }
             onCountdownFinished()
         }
     }
 
     /**
-     * 暂停倒计时（切出应用时保留剩余秒数）
+     * 暂停倒计时（切出应用时保留剩余秒数并持久化保存）
      */
     fun pauseCountdown() {
         countdownJob?.cancel()
         _isCountingDown.value = false
         _isPaused.value = true
+        preferences.setSavedRemainingSeconds(_remainingSeconds.value)
     }
 
     /**
@@ -131,6 +145,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isCountingDown.value = false
         _isPaused.value = false
         _justCompleted.value = true
+        preferences.clearSavedRemainingSeconds()
 
         val context = getApplication<Application>()
         // 1. 消除系统常驻通知
@@ -213,7 +228,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         preferences.setDwellDuration(seconds)
         if (!_isCountingDown.value) {
             _remainingSeconds.value = seconds
+            preferences.setSavedRemainingSeconds(seconds)
         }
+    }
+
+    fun setKeepScreenOn(enabled: Boolean) {
+        preferences.setKeepScreenOn(enabled)
     }
 
     fun setReminderTime(hour: Int, minute: Int) {
@@ -247,6 +267,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             preferences.setNotificationActive(true)
             preferences.resetTodayReviewed()
             _remainingSeconds.value = dwell
+            preferences.setSavedRemainingSeconds(dwell)
             _justCompleted.value = false
             startOrResumeCountdown()
         }
@@ -258,6 +279,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun manuallyClearNotification() {
         pauseCountdown()
         NotificationHelper.cancelReminderNotification(getApplication())
+        preferences.clearSavedRemainingSeconds()
         _remainingSeconds.value = preferences.getDwellDuration()
     }
 }

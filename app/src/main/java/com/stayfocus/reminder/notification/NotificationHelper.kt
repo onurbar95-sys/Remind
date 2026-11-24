@@ -79,8 +79,16 @@ object NotificationHelper {
                 .mapIndexed { index, item -> "${index + 1}. ${item.title}" }
                 .joinToString("\n")
             val more = if (pendingCount > 3) "\n... 还有 ${pendingCount - 3} 项待办" else ""
-            val dwellMinutes = if (dwellDurationSeconds >= 60) "${dwellDurationSeconds / 60} 分钟" else "${dwellDurationSeconds} 秒"
-            "$firstFew$more\n\n🔒 提示：此通知已常驻锁定，需进入 App 停留满 $dwellMinutes 方可自动消除！"
+            val dwellFormatted = when {
+                dwellDurationSeconds >= 3600 -> {
+                    val h = dwellDurationSeconds / 3600
+                    val m = (dwellDurationSeconds % 3600) / 60
+                    if (m == 0) "${h} 小时" else "${h} 小时 ${m} 分钟"
+                }
+                dwellDurationSeconds >= 60 -> "${dwellDurationSeconds / 60} 分钟"
+                else -> "${dwellDurationSeconds} 秒"
+            }
+            "$firstFew$more\n\n🔒 提示：此通知已常驻锁定，需进入 App 停留满 $dwellFormatted 方可自动消除！"
         } else {
             "暂无未完成待办。点击进入 App 停留确认今日计划，常驻通知将自动消除。"
         }

@@ -53,7 +53,7 @@ fun MainScreen(
                 title = {
                     Column {
                         Text(
-                            text = if (selectedTab == 0) "驻留待办" else "强提醒配置",
+                            text = if (selectedTab == 0) "ab" else "强提醒配置",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )

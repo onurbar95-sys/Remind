@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">驻留待办</string>
+    <string name="app_name">ab</string>
     <string name="notification_channel_name">每日待办强提醒</string>
     <string name="notification_channel_desc">每日定时发送常驻待办提醒，需进入应用停留完成确认才自动消除</string>
     <string name="notification_title_default">今日待办强提醒</string>
